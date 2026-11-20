@@ -1296,9 +1296,16 @@ local function setPanelVisible(visible)
     end
 end
 
+local KEYBIND_ACTION = "ZATH_HUB_LEFT_CTRL_TOGGLE"
+
 local closeButton = headerButton("×", -33, function()
     -- O X encerra o hub; nao existe botao extra no rodape.
     Session.stopped = true
+    UserInputService:UnbindAction(KEYBIND_ACTION)
+    if keybindConnection then
+        keybindConnection:Disconnect()
+        keybindConnection = nil
+    end
     if ENV.ZATH_HUB_GUI == gui then
         ENV.ZATH_HUB_GUI = nil
     end
@@ -1320,24 +1327,39 @@ floating.MouseButton1Click:Connect(function()
     setPanelVisible(true)
 end)
 
--- Atalho global: Ctrl esquerdo alterna entre janela e bolinha.
--- InputBegan e usado diretamente para receber a tecla mesmo quando o jogo
--- marca o evento como processado. O estado atual define a acao:
--- janela visivel = minimiza; janela oculta = restaura.
+-- Atalho global: Ctrl esquerdo alterna janela/bolinha.
+-- Usa ContextActionService com prioridade alta e InputBegan como fallback.
+-- Ambos compartilham o mesmo debounce para evitar alternancia dupla.
 local lastKeybindToggle = 0
 local keybindConnection
 
-keybindConnection = UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+local function togglePanelFromKey()
     if not running() or not gui.Parent then return end
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-    if input.KeyCode ~= Enum.KeyCode.LeftControl then return end
-    if UserInputService:GetFocusedTextBox() then return end
-
     local now = os.clock()
-    if now - lastKeybindToggle < 0.3 then return end
+    if now - lastKeybindToggle < 0.45 then return end
     lastKeybindToggle = now
-
     setPanelVisible(not main.Visible)
+    print("[ZATH HUB] Ctrl esquerdo detectado; interface alternada.")
+end
+
+ContextActionService:BindActionAtPriority(
+    KEYBIND_ACTION,
+    function(_, inputState, _inputObject)
+        if inputState == Enum.UserInputState.Begin then
+            togglePanelFromKey()
+        end
+        return Enum.ContextActionResult.Sink
+    end,
+    false,
+    3000,
+    Enum.KeyCode.LeftControl
+)
+
+keybindConnection = UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+    if input.UserInputType == Enum.UserInputType.Keyboard
+        and input.KeyCode == Enum.KeyCode.LeftControl then
+        togglePanelFromKey()
+    end
 end)
 
 print("[ZATH HUB V4] Inicializado.")
