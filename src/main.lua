@@ -824,7 +824,6 @@ local function button(text, x, y, w, h, callback, parentObject)
     return obj
 end
 
-local minimized = false
 local maximized = false
 local normalSize = UDim2.fromOffset(360, 470)
 local maxSize = UDim2.fromOffset(440, 540)
@@ -999,19 +998,28 @@ end)
 
 local floating = Instance.new("TextButton")
 floating.Name = "ZathFloatingButton"
-floating.Size = UDim2.fromOffset(48, 48)
-floating.Position = UDim2.new(0, 24, 0.5, -24)
+floating.Size = UDim2.fromOffset(50, 50)
+floating.Position = UDim2.new(0, 24, 0.5, -25)
 floating.BackgroundColor3 = Color3.fromRGB(35, 112, 220)
+floating.BackgroundTransparency = 0.02
 floating.Text = "Z"
 floating.TextColor3 = Color3.fromRGB(8, 15, 27)
 floating.Font = Enum.Font.GothamBlack
 floating.TextSize = 22
 floating.Visible = false
+floating.AutoButtonColor = true
+floating.ZIndex = 50
 floating.Parent = gui
+
+local floatingAspect = Instance.new("UIAspectRatioConstraint")
+floatingAspect.AspectRatio = 1
+floatingAspect.Parent = floating
+
 Instance.new("UICorner", floating).CornerRadius = UDim.new(1, 0)
 local floatStroke = Instance.new("UIStroke", floating)
 floatStroke.Color = Color3.fromRGB(150, 205, 255)
-floatStroke.Thickness = 1.5
+floatStroke.Thickness = 1.8
+floatStroke.Transparency = 0.05
 
 local function setPanelVisible(visible)
     main.Visible = visible
@@ -1019,39 +1027,24 @@ local function setPanelVisible(visible)
 end
 
 local closeButton = headerButton("×", -33, function()
-    setPanelVisible(false)
+    -- X encerra a interface e para esta sessao do hub.
+    Session.stopped = true
+    gui:Destroy()
 end)
 
 local maximizeButton = headerButton("□", -61, function()
-    if minimized then
-        minimized = false
-        body.Visible = true
-    end
     maximized = not maximized
     main.Size = maximized and maxSize or normalSize
     maximizeButton.Text = maximized and "▣" or "□"
 end)
 
 local minimizeButton = headerButton("−", -89, function()
-    minimized = not minimized
-    body.Visible = not minimized
-    main.Size = minimized and UDim2.fromOffset(maximized and 440 or 360, 62)
-        or (maximized and maxSize or normalSize)
+    -- Minimizar esconde a janela inteira; somente a bolinha permanece.
+    setPanelVisible(false)
 end)
 
 floating.MouseButton1Click:Connect(function()
     setPanelVisible(true)
-end)
-
-button("ENCERRAR HUB", 15, 435, 330, 25, function()
-    Session.stopped = true
-    for key in pairs(Config) do
-        if type(Config[key]) == "boolean" then Config[key] = false end
-    end
-    for key in pairs(Config.Potions) do Config.Potions[key] = false end
-    table.clear(rainDrops)
-    table.clear(rainAttempted)
-    gui:Destroy()
 end)
 
 print("[ZATH HUB V4] Inicializado.")
