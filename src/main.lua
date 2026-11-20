@@ -50,7 +50,6 @@ end
 local Config = {
     Variant = false,
     Items = false,
-    Crates = false,
     AntiAFK = false,
     Potions = {
         BluetoothPotion = false,
@@ -74,7 +73,6 @@ local function configSnapshot()
     return {
         Variant = Config.Variant == true,
         Items = Config.Items == true,
-        Crates = Config.Crates == true,
         AntiAFK = Config.AntiAFK == true,
         Potions = {
             BluetoothPotion = Config.Potions.BluetoothPotion == true,
@@ -88,7 +86,7 @@ end
 local function applyConfig(saved)
     if type(saved) ~= "table" then return end
 
-    for _, key in ipairs({ "Variant", "Items", "Crates", "AntiAFK" }) do
+    for _, key in ipairs({ "Variant", "Items", "AntiAFK" }) do
         if type(saved[key]) == "boolean" then
             Config[key] = saved[key]
         end
@@ -778,8 +776,8 @@ gui.ResetOnSpawn = false
 gui.Parent = parent
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(360, 500)
-main.Position = UDim2.new(0.5, -180, 0.5, -250)
+main.Size = UDim2.fromOffset(360, 430)
+main.Position = UDim2.new(0.5, -180, 0.5, -215)
 main.BackgroundColor3 = Color3.fromRGB(17, 17, 24)
 main.BorderSizePixel = 0
 main.Active = true
@@ -883,23 +881,22 @@ end
 section("AUTOMACAO", 0)
 toggle("Coletar variantes automaticamente", "Variant", 23, Config)
 toggle("Coletar itens e Item Rain (sem dinheiro)", "Items", 57, Config)
-toggle("Farm de caixas / polidor / venda", "Crates", 91, Config)
-toggle("Anti-AFK do cliente", "AntiAFK", 125, Config)
+toggle("Anti-AFK do cliente", "AntiAFK", 91, Config)
 
 section("POCOES — CONTROLES INDIVIDUAIS", 165)
-toggle("Pocao Bluetooth", "BluetoothPotion", 188, Config.Potions)
-toggle("Pocao de Dinheiro (Cash)", "CashPotion", 222, Config.Potions)
-toggle("Pocao de Velocidade dos Giros", "GradeSpeedPotion", 256, Config.Potions)
-toggle("Pocao de Sorte", "LuckPotion", 290, Config.Potions)
+toggle("Pocao Bluetooth", "BluetoothPotion", 154, Config.Potions)
+toggle("Pocao de Dinheiro (Cash)", "CashPotion", 188, Config.Potions)
+toggle("Pocao de Velocidade dos Giros", "GradeSpeedPotion", 222, Config.Potions)
+toggle("Pocao de Sorte", "LuckPotion", 256, Config.Potions)
 
-button("SALVAR CONFIGURACOES", 5, 324, 325, 24, function()
+button("SALVAR CONFIGURACOES", 5, 290, 325, 24, function()
     local ok, err = saveConfig()
     status.Text = ok and "Configuracoes salvas no executor"
         or ("Falha ao salvar: " .. tostring(err))
 end, body)
 
-section("VARIANTES DESCOBERTAS", 353)
-local variantList = label("Aguardando variantes...", 8, 375, 320, 35,
+section("VARIANTES DESCOBERTAS", 319)
+local variantList = label("Aguardando variantes...", 8, 341, 320, 35,
     Color3.fromRGB(220, 210, 240), body)
 variantList.TextYAlignment = Enum.TextYAlignment.Top
 variantList.TextWrapped = true
@@ -924,11 +921,11 @@ local minimize = button("—", 320, 9, 25, 25, function()
     minimized = not minimized
     body.Visible = not minimized
     main.Size = minimized and UDim2.fromOffset(360, 48)
-        or UDim2.fromOffset(360, 500)
+        or UDim2.fromOffset(360, 430)
     minimize.Text = minimized and "+" or "—"
 end)
 
-button("ENCERRAR HUB", 15, 465, 330, 25, function()
+button("ENCERRAR HUB", 15, 395, 330, 25, function()
     Session.stopped = true
     for key in pairs(Config) do
         if type(Config[key]) == "boolean" then Config[key] = false end
