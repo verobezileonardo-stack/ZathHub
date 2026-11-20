@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 local CoreGui = game:GetService("CoreGui")
 
 local Player = Players.LocalPlayer
@@ -1298,6 +1299,7 @@ end
 local closeButton = headerButton("×", -33, function()
     -- O X encerra o hub; nao existe botao extra no rodape.
     Session.stopped = true
+    ContextActionService:UnbindAction(KEYBIND_ACTION)
     if ENV.ZATH_HUB_GUI == gui then
         ENV.ZATH_HUB_GUI = nil
     end
@@ -1319,20 +1321,42 @@ floating.MouseButton1Click:Connect(function()
     setPanelVisible(true)
 end)
 
--- Atalho global: Ctrl esquerdo alterna entre abrir e minimizar o hub.
--- A bolinha acompanha o estado da janela; o atalho tambem funciona com o hub aberto.
--- Ignora Ctrl apenas quando o jogador estiver digitando em uma caixa de texto.
-local keybindConnection
-keybindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not running() or not gui.Parent then return end
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-    if input.KeyCode ~= Enum.KeyCode.LeftControl then return end
+-- Atalho global: Ctrl esquerdo alterna a janela usando prioridade alta.
+-- Isso evita que a interface/jogo consuma o atalho antes do hub recebe-lo.
+local KEYBIND_ACTION = "ZATH_HUB_TOGGLE_WINDOW"
+local lastKeybindToggle = 0
 
-    local focusedTextBox = UserInputService:GetFocusedTextBox()
-    if focusedTextBox then return end
+local function handleHubKeybind(_, inputState)
+    if inputState ~= Enum.UserInputState.Begin then
+        return Enum.ContextActionResult.Sink
+    end
+
+    if not running() or not gui.Parent then
+        return Enum.ContextActionResult.Sink
+    end
+
+    if UserInputService:GetFocusedTextBox() then
+        return Enum.ContextActionResult.Pass
+    end
+
+    -- Pequena trava contra chamadas duplicadas do mesmo pressionamento.
+    local now = os.clock()
+    if now - lastKeybindToggle < 0.25 then
+        return Enum.ContextActionResult.Sink
+    end
+    lastKeybindToggle = now
 
     setPanelVisible(not main.Visible)
-end)
+    return Enum.ContextActionResult.Sink
+end
+
+ContextActionService:BindActionAtPriority(
+    KEYBIND_ACTION,
+    handleHubKeybind,
+    false,
+    Enum.ContextActionPriority.High.Value + 1000,
+    Enum.KeyCode.LeftControl
+)
 
 print("[ZATH HUB V4] Inicializado.")
 print("[ZATH HUB V4] Limite de coleta por lote ativado.")
