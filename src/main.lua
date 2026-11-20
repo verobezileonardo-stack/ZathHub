@@ -729,7 +729,8 @@ local function section(text, y)
 end
 
 local function toggle(text, key, y, tableRef)
-    local b = button("", 5, y, 325, 29, function()
+    local b
+    b = button("", 5, y, 325, 29, function()
         tableRef[key] = not tableRef[key]
         local on = tableRef[key]
         b.Text = text .. (on and "  [ON]" or "  [OFF]")
