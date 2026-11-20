@@ -60,6 +60,115 @@ local Config = {
     }
 }
 
+
+--========================================================
+-- CONFIGURACOES PERSISTENTES (ARQUIVO LOCAL DO EXECUTOR)
+--========================================================
+
+local HttpService = game:GetService("HttpService")
+local CONFIG_FOLDER = "ZathHub"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+local filePersistence = false
+
+local function configSnapshot()
+    return {
+        Variant = Config.Variant == true,
+        Items = Config.Items == true,
+        Crates = Config.Crates == true,
+        AntiAFK = Config.AntiAFK == true,
+        Potions = {
+            BluetoothPotion = Config.Potions.BluetoothPotion == true,
+            CashPotion = Config.Potions.CashPotion == true,
+            GradeSpeedPotion = Config.Potions.GradeSpeedPotion == true,
+            LuckPotion = Config.Potions.LuckPotion == true
+        }
+    }
+end
+
+local function applyConfig(saved)
+    if type(saved) ~= "table" then return end
+
+    for _, key in ipairs({ "Variant", "Items", "Crates", "AntiAFK" }) do
+        if type(saved[key]) == "boolean" then
+            Config[key] = saved[key]
+        end
+    end
+
+    if type(saved.Potions) == "table" then
+        for key in pairs(Config.Potions) do
+            if type(saved.Potions[key]) == "boolean" then
+                Config.Potions[key] = saved.Potions[key]
+            end
+        end
+    end
+end
+
+local function saveConfig()
+    local snapshot = configSnapshot()
+    ENV.ZATH_HUB_CONFIG_CACHE = snapshot
+
+    if type(writefile) ~= "function" then
+        return false, "Executor sem writefile"
+    end
+
+    local ok, err = pcall(function()
+        if type(isfolder) == "function" then
+            if not isfolder(CONFIG_FOLDER) then
+                assert(type(makefolder) == "function", "makefolder indisponivel")
+                makefolder(CONFIG_FOLDER)
+            end
+        elseif type(makefolder) == "function" then
+            pcall(makefolder, CONFIG_FOLDER)
+        end
+
+        writefile(CONFIG_FILE, HttpService:JSONEncode(snapshot))
+    end)
+
+    if ok then
+        filePersistence = true
+        return true
+    end
+    return false, tostring(err)
+end
+
+local function loadConfig()
+    -- Cache da sessao atual como fallback; so o arquivo sobrevive ao rejoin.
+    if type(ENV.ZATH_HUB_CONFIG_CACHE) == "table" then
+        applyConfig(ENV.ZATH_HUB_CONFIG_CACHE)
+    end
+
+    if type(readfile) ~= "function" then
+        warn("[ZATH] Executor sem readfile; configuracoes nao persistem apos rejoin.")
+        return false
+    end
+
+    local ok, result = pcall(function()
+        if type(isfile) == "function" and not isfile(CONFIG_FILE) then
+            return nil
+        end
+        return readfile(CONFIG_FILE)
+    end)
+
+    if not ok or type(result) ~= "string" or result == "" then
+        return false
+    end
+
+    local decodedOk, decoded = pcall(function()
+        return HttpService:JSONDecode(result)
+    end)
+
+    if decodedOk and type(decoded) == "table" then
+        applyConfig(decoded)
+        filePersistence = true
+        return true
+    end
+
+    warn("[ZATH] Arquivo de configuracao invalido; usando padroes/cache.")
+    return false
+end
+
+local loadedFromFile = loadConfig()
+
 local CYCLE_INTERVAL = 30 * 60
 local OBJECT_SCAN_INTERVAL = 0.75
 local VARIANT_RETRY_INTERVAL = 3
@@ -721,8 +830,11 @@ body.Size = UDim2.new(1, -20, 1, -78)
 body.BackgroundTransparency = 1
 body.Parent = main
 
-local status = label("Status: Inicializado", 15, 40, 320, 20,
-    Color3.fromRGB(160, 220, 170))
+local status = label(
+    loadedFromFile and "Configuracoes carregadas do arquivo"
+        or (filePersistence and "Configuracoes carregadas" or "Configuracoes padrao/cache"),
+    15, 40, 320, 20, Color3.fromRGB(160, 220, 170)
+)
 
 local function section(text, y)
     label(text, 5, y, 320, 20, Color3.fromRGB(190, 130, 255), body)
@@ -733,6 +845,12 @@ local function toggle(text, key, y, tableRef)
     b = button("", 5, y, 325, 29, function()
         tableRef[key] = not tableRef[key]
         local on = tableRef[key]
+        local saved, saveError = saveConfig()
+        if saved then
+            status.Text = "Configuracao salva automaticamente"
+        else
+            status.Text = "Aviso: configuracao nao persistida (" .. tostring(saveError) .. ")"
+        end
         b.Text = text .. (on and "  [ON]" or "  [OFF]")
         b.BackgroundColor3 = on
             and Color3.fromRGB(75, 45, 115)
@@ -774,8 +892,14 @@ toggle("Pocao de Dinheiro (Cash)", "CashPotion", 222, Config.Potions)
 toggle("Pocao de Velocidade dos Giros", "GradeSpeedPotion", 256, Config.Potions)
 toggle("Pocao de Sorte", "LuckPotion", 290, Config.Potions)
 
-section("VARIANTES DESCOBERTAS", 330)
-local variantList = label("Aguardando variantes...", 8, 352, 320, 45,
+button("SALVAR CONFIGURACOES", 5, 324, 325, 24, function()
+    local ok, err = saveConfig()
+    status.Text = ok and "Configuracoes salvas no executor"
+        or ("Falha ao salvar: " .. tostring(err))
+end, body)
+
+section("VARIANTES DESCOBERTAS", 353)
+local variantList = label("Aguardando variantes...", 8, 375, 320, 35,
     Color3.fromRGB(220, 210, 240), body)
 variantList.TextYAlignment = Enum.TextYAlignment.Top
 variantList.TextWrapped = true
