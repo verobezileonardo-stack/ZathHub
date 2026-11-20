@@ -15,6 +15,7 @@ Cole no executor:
 - Uso individual de pocoes.
 - Anti-AFK limitado ao evento Player.Idled do cliente.
 - Fechamento pelo X, com cancelamento global da sessao anterior.
+- Atalho Left Ctrl para abrir o hub; a bolinha Z continua funcionando para restaurar a janela quando minimizada.
 - Auto Collect Rewards: procura botoes de resgate dentro do painel de recompensas por tempo e aciona apenas botoes visiveis e habilitados.
 
 ## Observacoes
