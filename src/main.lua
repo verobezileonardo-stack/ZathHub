@@ -1031,8 +1031,8 @@ end
 
 local rewardButtonStates = setmetatable({}, { __mode = "k" })
 local REWARD_SCAN_INTERVAL = 1
-local REWARD_RETRY_DELAY = 4
-local REWARD_MAX_FAILED_ATTEMPTS = 2
+local REWARD_RETRY_DELAY = 5
+local REWARD_MAX_ATTEMPTS = 12
 local rewardTriggerCount = 0
 
 local function lowerText(value)
@@ -1093,7 +1093,7 @@ local function rewardButtonInfo(buttonObject)
     local ancestor = buttonObject.Parent
     local depth = 0
 
-    while ancestor and depth < 5 do
+    while ancestor and depth < 10 do
         contextText = contextText .. " " .. lowerText(ancestor.Name)
         if ancestor:IsA("TextLabel") or ancestor:IsA("TextButton") then
             contextText = contextText .. " " .. lowerText(safeText(ancestor))
@@ -1204,31 +1204,27 @@ task.spawn(function()
                             local state = rewardButtonStates[candidate]
 
                             if not state then
-                                state = { attempted = false, failures = 0, lastAttempt = 0 }
+                                state = { attempts = 0, lastAttempt = 0 }
                                 rewardButtonStates[candidate] = state
                             end
 
                             if not isReady then
                                 -- A recompensa mudou para bloqueada/resgatada.
                                 -- Permite uma nova coleta quando voltar a ficar pronta.
-                                state.attempted = false
-                                state.failures = 0
+                                state.attempts = 0
                                 state.lastAttempt = 0
                             else
                                 ready = ready + 1
                                 local elapsed = os.clock() - state.lastAttempt
-                                local mayRetry = not state.attempted
-                                    and state.failures < REWARD_MAX_FAILED_ATTEMPTS
+                                local mayRetry = state.attempts < REWARD_MAX_ATTEMPTS
                                     and elapsed >= REWARD_RETRY_DELAY
 
                                 if mayRetry then
                                     state.lastAttempt = os.clock()
+                                    state.attempts = state.attempts + 1
                                     local clicked = clickRewardButton(candidate)
                                     if clicked then
-                                        state.attempted = true
                                         rewardTriggerCount = rewardTriggerCount + 1
-                                    else
-                                        state.failures = state.failures + 1
                                     end
                                 end
                             end
