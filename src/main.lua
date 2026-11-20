@@ -1031,6 +1031,7 @@ local rewardButtonStates = setmetatable({}, { __mode = "k" })
 local REWARD_SCAN_INTERVAL = 1
 local REWARD_RETRY_DELAY = 4
 local REWARD_MAX_FAILED_ATTEMPTS = 2
+local rewardTriggerCount = 0
 
 local function lowerText(value)
     return string.lower(tostring(value or ""))
@@ -1190,7 +1191,6 @@ task.spawn(function()
             local playerGui = Player:FindFirstChildOfClass("PlayerGui")
             local scanned = 0
             local ready = 0
-            local activated = 0
 
             if playerGui then
                 for _, candidate in ipairs(playerGui:GetDescendants()) do
@@ -1224,7 +1224,7 @@ task.spawn(function()
                                     local clicked = clickRewardButton(candidate)
                                     if clicked then
                                         state.attempted = true
-                                        activated = activated + 1
+                                        rewardTriggerCount = rewardTriggerCount + 1
                                     else
                                         state.failures = state.failures + 1
                                     end
@@ -1241,7 +1241,7 @@ task.spawn(function()
                 rewardStatus.Text = "Rewards: " .. scanned .. " encontradas • aguardando"
             else
                 rewardStatus.Text = "Rewards: " .. ready .. " liberada(s) • " ..
-                    activated .. " acionada(s)"
+                    rewardTriggerCount .. " clique(s) enviado(s)"
             end
         end
 
