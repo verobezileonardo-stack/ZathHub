@@ -778,8 +778,8 @@ gui.ResetOnSpawn = false
 gui.Parent = parent
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(360, 465)
-main.Position = UDim2.new(0.5, -180, 0.5, -232)
+main.Size = UDim2.fromOffset(360, 500)
+main.Position = UDim2.new(0.5, -180, 0.5, -250)
 main.BackgroundColor3 = Color3.fromRGB(17, 17, 24)
 main.BorderSizePixel = 0
 main.Active = true
@@ -924,11 +924,11 @@ local minimize = button("—", 320, 9, 25, 25, function()
     minimized = not minimized
     body.Visible = not minimized
     main.Size = minimized and UDim2.fromOffset(360, 48)
-        or UDim2.fromOffset(360, 465)
+        or UDim2.fromOffset(360, 500)
     minimize.Text = minimized and "+" or "—"
 end)
 
-button("ENCERRAR HUB", 15, 430, 330, 25, function()
+button("ENCERRAR HUB", 15, 465, 330, 25, function()
     Session.stopped = true
     for key in pairs(Config) do
         if type(Config[key]) == "boolean" then Config[key] = false end
