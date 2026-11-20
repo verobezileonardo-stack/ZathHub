@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local VirtualUser = game:GetService("VirtualUser")
+local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
 local Player = Players.LocalPlayer
@@ -1316,6 +1317,17 @@ end)
 
 floating.MouseButton1Click:Connect(function()
     setPanelVisible(true)
+end)
+
+-- Atalho global: Ctrl esquerdo abre o hub sem remover a bolinha.
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not running() or gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.LeftControl then
+        if not main.Visible then
+            setPanelVisible(true)
+        end
+    end
 end)
 
 print("[ZATH HUB V4] Inicializado.")
