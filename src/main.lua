@@ -771,8 +771,8 @@ gui.Parent = parent
 
 local main = Instance.new("Frame")
 main.Name = "Main"
-main.Size = UDim2.fromOffset(360, 430)
-main.Position = UDim2.new(0.5, -180, 0.5, -215)
+main.Size = UDim2.fromOffset(360, 470)
+main.Position = UDim2.new(0.5, -180, 0.5, -235)
 main.BackgroundColor3 = Color3.fromRGB(18, 20, 30)
 main.BackgroundTransparency = 0.16
 main.BorderSizePixel = 0
@@ -826,8 +826,8 @@ end
 
 local minimized = false
 local maximized = false
-local normalSize = UDim2.fromOffset(360, 430)
-local maxSize = UDim2.fromOffset(440, 500)
+local normalSize = UDim2.fromOffset(360, 470)
+local maxSize = UDim2.fromOffset(440, 540)
 
 local header = Instance.new("Frame")
 header.Name = "Header"
@@ -870,7 +870,7 @@ body.Parent = main
 local status = label(
     loadedFromFile and "Configuracoes carregadas do arquivo"
         or (filePersistence and "Configuracoes carregadas" or "Configuracoes padrao/cache"),
-    15, 40, 230, 18, Color3.fromRGB(155, 205, 175), header
+    15, 49, 230, 12, Color3.fromRGB(155, 205, 175), header
 )
 status.TextSize = 9
 
@@ -1043,7 +1043,7 @@ floating.MouseButton1Click:Connect(function()
     setPanelVisible(true)
 end)
 
-button("ENCERRAR HUB", 5, 390, 325, 25, function()
+button("ENCERRAR HUB", 15, 435, 330, 25, function()
     Session.stopped = true
     for key in pairs(Config) do
         if type(Config[key]) == "boolean" then Config[key] = false end
@@ -1052,7 +1052,7 @@ button("ENCERRAR HUB", 5, 390, 325, 25, function()
     table.clear(rainDrops)
     table.clear(rainAttempted)
     gui:Destroy()
-end, body)
+end)
 
 print("[ZATH HUB V4] Inicializado.")
 print("[ZATH HUB V4] Limite de coleta por lote ativado.")
