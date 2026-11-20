@@ -12,8 +12,6 @@ Cole no executor:
 
 - Coleta de variantes.
 - Coleta de CollectableObject e Item Rain.
-- Automacao de caixas com snapshot do lote e limite de chamadas.
-- Polimento, coleta limitada de caixas azuis e venda.
 - Uso individual de pocoes.
 - Anti-AFK limitado ao evento Player.Idled do cliente.
 - Botao de encerramento com cancelamento global da sessao anterior.
@@ -41,3 +39,7 @@ Cole no executor:
 - O botao `SALVAR CONFIGURACOES` permite salvar manualmente.
 - Para manter as opcoes depois de rejoin, o executor precisa oferecer `readfile`, `writefile` e suporte a criar a pasta `ZathHub` (`makefolder`/`isfolder`). Se esses recursos nao existirem, o script avisa que nao conseguiu persistir; o cache de memoria nao sobrevive a um rejoin completo.
 - O `loader.lua` permanece no mesmo caminho e URL; ele busca sempre a versao atual de `src/main.lua` na branch `main`.
+
+## Alteracao
+
+A automacao de caixas, polidor e venda foi retirada da interface e desativada. O hub nao inicia mais o ciclo automatico de caixas.
