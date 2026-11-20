@@ -33,3 +33,11 @@ Cole no executor:
 - loader.lua
 - src/main.lua
 - README.md
+
+## Configuracoes persistentes
+
+- As opcoes gerais e cada pocao sao carregadas automaticamente ao iniciar.
+- Cada clique em uma opcao salva imediatamente o estado em `ZathHub/config.json` no armazenamento local do executor.
+- O botao `SALVAR CONFIGURACOES` permite salvar manualmente.
+- Para manter as opcoes depois de rejoin, o executor precisa oferecer `readfile`, `writefile` e suporte a criar a pasta `ZathHub` (`makefolder`/`isfolder`). Se esses recursos nao existirem, o script avisa que nao conseguiu persistir; o cache de memoria nao sobrevive a um rejoin completo.
+- O `loader.lua` permanece no mesmo caminho e URL; ele busca sempre a versao atual de `src/main.lua` na branch `main`.
