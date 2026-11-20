@@ -753,21 +753,43 @@ end)
 -- INTERFACE | ACRYLIC COM JANELA E BOTAO FLUTUANTE
 --========================================================
 
-pcall(function()
-    local old = CoreGui:FindFirstChild("ZATH_HUB_V4")
-    if old then old:Destroy() end
-end)
-
+-- Remove todas as instancias anteriores, inclusive quando o executor
+-- colocou o ScreenGui em gethui() em vez de CoreGui.
 local parent = CoreGui
 pcall(function()
-    if type(gethui) == "function" then parent = gethui() end
+    if type(gethui) == "function" then
+        parent = gethui()
+    end
 end)
+
+pcall(function()
+    local previousGui = ENV.ZATH_HUB_GUI
+    if previousGui then previousGui:Destroy() end
+end)
+
+local guiContainers = { CoreGui }
+if parent ~= CoreGui then
+    table.insert(guiContainers, parent)
+end
+
+for _, container in ipairs(guiContainers) do
+    pcall(function()
+        for _, child in ipairs(container:GetChildren()) do
+            if child.Name == "ZATH_HUB_V4" then
+                child:Destroy()
+            end
+        end
+    end)
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ZATH_HUB_V4"
 gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 9999
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parent
+ENV.ZATH_HUB_GUI = gui
 
 local main = Instance.new("Frame")
 main.Name = "Main"
@@ -1008,7 +1030,9 @@ floating.Font = Enum.Font.GothamBlack
 floating.TextSize = 22
 floating.Visible = false
 floating.AutoButtonColor = true
-floating.ZIndex = 50
+floating.Active = true
+floating.Draggable = true
+floating.ZIndex = 100
 floating.Parent = gui
 
 local floatingAspect = Instance.new("UIAspectRatioConstraint")
@@ -1022,13 +1046,22 @@ floatStroke.Thickness = 1.8
 floatStroke.Transparency = 0.05
 
 local function setPanelVisible(visible)
-    main.Visible = visible
-    floating.Visible = not visible
+    -- Estados mutuamente exclusivos: janela OU bolinha, nunca os dois.
+    if visible then
+        floating.Visible = false
+        main.Visible = true
+    else
+        main.Visible = false
+        floating.Visible = true
+    end
 end
 
 local closeButton = headerButton("×", -33, function()
-    -- X encerra a interface e para esta sessao do hub.
+    -- O X encerra o hub; nao existe botao extra no rodape.
     Session.stopped = true
+    if ENV.ZATH_HUB_GUI == gui then
+        ENV.ZATH_HUB_GUI = nil
+    end
     gui:Destroy()
 end)
 
