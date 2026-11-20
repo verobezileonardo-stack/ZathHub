@@ -1299,7 +1299,6 @@ end
 local closeButton = headerButton("×", -33, function()
     -- O X encerra o hub; nao existe botao extra no rodape.
     Session.stopped = true
-    ContextActionService:UnbindAction(KEYBIND_ACTION)
     if ENV.ZATH_HUB_GUI == gui then
         ENV.ZATH_HUB_GUI = nil
     end
@@ -1321,42 +1320,25 @@ floating.MouseButton1Click:Connect(function()
     setPanelVisible(true)
 end)
 
--- Atalho global: Ctrl esquerdo alterna a janela usando prioridade alta.
--- Isso evita que a interface/jogo consuma o atalho antes do hub recebe-lo.
-local KEYBIND_ACTION = "ZATH_HUB_TOGGLE_WINDOW"
+-- Atalho global: Ctrl esquerdo alterna entre janela e bolinha.
+-- InputBegan e usado diretamente para receber a tecla mesmo quando o jogo
+-- marca o evento como processado. O estado atual define a acao:
+-- janela visivel = minimiza; janela oculta = restaura.
 local lastKeybindToggle = 0
+local keybindConnection
 
-local function handleHubKeybind(_, inputState)
-    if inputState ~= Enum.UserInputState.Begin then
-        return Enum.ContextActionResult.Sink
-    end
+keybindConnection = UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+    if not running() or not gui.Parent then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+    if input.KeyCode ~= Enum.KeyCode.LeftControl then return end
+    if UserInputService:GetFocusedTextBox() then return end
 
-    if not running() or not gui.Parent then
-        return Enum.ContextActionResult.Sink
-    end
-
-    if UserInputService:GetFocusedTextBox() then
-        return Enum.ContextActionResult.Pass
-    end
-
-    -- Pequena trava contra chamadas duplicadas do mesmo pressionamento.
     local now = os.clock()
-    if now - lastKeybindToggle < 0.25 then
-        return Enum.ContextActionResult.Sink
-    end
+    if now - lastKeybindToggle < 0.3 then return end
     lastKeybindToggle = now
 
     setPanelVisible(not main.Visible)
-    return Enum.ContextActionResult.Sink
-end
-
-ContextActionService:BindActionAtPriority(
-    KEYBIND_ACTION,
-    handleHubKeybind,
-    false,
-    Enum.ContextActionPriority.High.Value + 1000,
-    Enum.KeyCode.LeftControl
-)
+end)
 
 print("[ZATH HUB V4] Inicializado.")
 print("[ZATH HUB V4] Limite de coleta por lote ativado.")
