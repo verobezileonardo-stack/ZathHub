@@ -1320,13 +1320,19 @@ floating.MouseButton1Click:Connect(function()
 end)
 
 -- Atalho global: Ctrl esquerdo abre o hub sem remover a bolinha.
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not running() or gameProcessed then return end
+-- Nao bloqueia o atalho quando o jogo marca a tecla como gameProcessed;
+-- apenas evita capturar Ctrl enquanto o jogador digita em uma caixa de texto.
+local keybindConnection
+keybindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not running() or not gui.Parent then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+    if input.KeyCode ~= Enum.KeyCode.LeftControl then return end
 
-    if input.KeyCode == Enum.KeyCode.LeftControl then
-        if not main.Visible then
-            setPanelVisible(true)
-        end
+    local focusedTextBox = UserInputService:GetFocusedTextBox()
+    if focusedTextBox then return end
+
+    if not main.Visible then
+        setPanelVisible(true)
     end
 end)
 
