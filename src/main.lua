@@ -1319,9 +1319,9 @@ floating.MouseButton1Click:Connect(function()
     setPanelVisible(true)
 end)
 
--- Atalho global: Ctrl esquerdo abre o hub sem remover a bolinha.
--- Nao bloqueia o atalho quando o jogo marca a tecla como gameProcessed;
--- apenas evita capturar Ctrl enquanto o jogador digita em uma caixa de texto.
+-- Atalho global: Ctrl esquerdo alterna entre abrir e minimizar o hub.
+-- A bolinha acompanha o estado da janela; o atalho tambem funciona com o hub aberto.
+-- Ignora Ctrl apenas quando o jogador estiver digitando em uma caixa de texto.
 local keybindConnection
 keybindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not running() or not gui.Parent then return end
@@ -1331,9 +1331,7 @@ keybindConnection = UserInputService.InputBegan:Connect(function(input, gameProc
     local focusedTextBox = UserInputService:GetFocusedTextBox()
     if focusedTextBox then return end
 
-    if not main.Visible then
-        setPanelVisible(true)
-    end
+    setPanelVisible(not main.Visible)
 end)
 
 print("[ZATH HUB V4] Inicializado.")
