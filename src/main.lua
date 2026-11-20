@@ -51,6 +51,7 @@ local Config = {
     Variant = false,
     Items = false,
     AntiAFK = false,
+    AutoRewards = false,
     Potions = {
         BluetoothPotion = false,
         CashPotion = false,
@@ -74,6 +75,7 @@ local function configSnapshot()
         Variant = Config.Variant == true,
         Items = Config.Items == true,
         AntiAFK = Config.AntiAFK == true,
+        AutoRewards = Config.AutoRewards == true,
         Potions = {
             BluetoothPotion = Config.Potions.BluetoothPotion == true,
             CashPotion = Config.Potions.CashPotion == true,
@@ -86,7 +88,7 @@ end
 local function applyConfig(saved)
     if type(saved) ~= "table" then return end
 
-    for _, key in ipairs({ "Variant", "Items", "AntiAFK" }) do
+    for _, key in ipairs({ "Variant", "Items", "AntiAFK", "AutoRewards" }) do
         if type(saved[key]) == "boolean" then
             Config[key] = saved[key]
         end
@@ -793,8 +795,8 @@ ENV.ZATH_HUB_GUI = gui
 
 local main = Instance.new("Frame")
 main.Name = "Main"
-main.Size = UDim2.fromOffset(360, 470)
-main.Position = UDim2.new(0.5, -180, 0.5, -235)
+main.Size = UDim2.fromOffset(360, 530)
+main.Position = UDim2.new(0.5, -180, 0.5, -265)
 main.BackgroundColor3 = Color3.fromRGB(18, 20, 30)
 main.BackgroundTransparency = 0.16
 main.BorderSizePixel = 0
@@ -847,8 +849,8 @@ local function button(text, x, y, w, h, callback, parentObject)
 end
 
 local maximized = false
-local normalSize = UDim2.fromOffset(360, 470)
-local maxSize = UDim2.fromOffset(440, 540)
+local normalSize = UDim2.fromOffset(360, 530)
+local maxSize = UDim2.fromOffset(440, 590)
 
 local header = Instance.new("Frame")
 header.Name = "Header"
@@ -983,24 +985,32 @@ section("AUTOMACAO", 0)
 toggle("Coletar variantes automaticamente", "Variant", 23, Config)
 toggle("Coletar itens e Item Rain (sem dinheiro)", "Items", 57, Config)
 toggle("Anti-AFK do cliente", "AntiAFK", 91, Config)
+toggle("Auto Collect Rewards", "AutoRewards", 125, Config)
 
-section("POCOES", 137)
-toggle("Pocao Bluetooth", "BluetoothPotion", 160, Config.Potions)
-toggle("Pocao de Dinheiro (Cash)", "CashPotion", 194, Config.Potions)
-toggle("Pocao de Velocidade dos Giros", "GradeSpeedPotion", 228, Config.Potions)
-toggle("Pocao de Sorte", "LuckPotion", 262, Config.Potions)
+section("POCOES", 171)
+toggle("Pocao Bluetooth", "BluetoothPotion", 194, Config.Potions)
+toggle("Pocao de Dinheiro (Cash)", "CashPotion", 228, Config.Potions)
+toggle("Pocao de Velocidade dos Giros", "GradeSpeedPotion", 262, Config.Potions)
+toggle("Pocao de Sorte", "LuckPotion", 296, Config.Potions)
 
-button("SALVAR CONFIGURACOES", 5, 296, 325, 25, function()
+button("SALVAR CONFIGURACOES", 5, 330, 325, 25, function()
     local ok, err = saveConfig()
     status.Text = ok and "Configuracoes salvas no executor"
         or ("Falha ao salvar: " .. tostring(err))
 end, body)
 
-section("VARIANTES DESCOBERTAS", 328)
-local variantList = label("Aguardando variantes...", 8, 350, 320, 35,
+section("VARIANTES DESCOBERTAS", 362)
+local variantList = label("Aguardando variantes...", 8, 384, 320, 35,
     Color3.fromRGB(210, 220, 238), body)
 variantList.TextYAlignment = Enum.TextYAlignment.Top
 variantList.TextWrapped = true
+
+local rewardStatus = label(
+    "Rewards: desligado",
+    8, 421, 320, 18,
+    Color3.fromRGB(155, 205, 175), body
+)
+rewardStatus.TextSize = 9
 
 local function updateVariants()
     local names = {}
@@ -1010,6 +1020,234 @@ local function updateVariants()
         and table.concat(names, "  |  ")
         or "Nenhuma variante descoberta."
 end
+
+--========================================================
+-- AUTO COLLECT REWARDS | DETECCAO PELO PAINEL DO JOGO
+-- Nao inventa RemoteEvent: aciona o botao real de resgate
+-- quando estiver visivel e habilitado na interface.
+--========================================================
+
+local rewardButtonStates = setmetatable({}, { __mode = "k" })
+local REWARD_SCAN_INTERVAL = 1
+local REWARD_RETRY_DELAY = 4
+local REWARD_MAX_FAILED_ATTEMPTS = 2
+
+local function lowerText(value)
+    return string.lower(tostring(value or ""))
+end
+
+local function containsAny(source, words)
+    for _, word in ipairs(words) do
+        if string.find(source, word, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local REWARD_WORDS = {
+    "reward", "rewards", "recompensa", "recompensas",
+    "playtime", "timeplayed", "time_played", "timereward",
+    "tempojogado", "tempo_jogado"
+}
+
+local ACTION_WORDS = {
+    "claim", "collect", "resgatar", "coletar", "receber", "pegar"
+}
+
+local BLOCKED_WORDS = {
+    "claimed", "collected", "resgatado", "coletado",
+    "locked", "bloqueado", "aguarde", "wait",
+    "coming soon", "em breve", "disponivel em", "available in"
+}
+
+local function safeText(instance)
+    local ok, value = pcall(function()
+        return instance.Text
+    end)
+    return ok and type(value) == "string" and value or ""
+end
+
+local function rewardButtonInfo(buttonObject)
+    if not buttonObject:IsA("GuiButton") then return false, "", "" end
+
+    local ownText = lowerText(buttonObject.Name .. " " .. safeText(buttonObject))
+    local descendantText = ""
+
+    for _, descendant in ipairs(buttonObject:GetDescendants()) do
+        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+            descendantText = descendantText .. " " ..
+                lowerText(descendant.Name .. " " .. safeText(descendant))
+        end
+    end
+
+    local actionText = ownText .. " " .. descendantText
+    if not containsAny(actionText, ACTION_WORDS) then
+        return false, actionText, ""
+    end
+
+    local contextText = ownText .. " " .. descendantText
+    local ancestor = buttonObject.Parent
+    local depth = 0
+
+    while ancestor and depth < 5 do
+        contextText = contextText .. " " .. lowerText(ancestor.Name)
+        if ancestor:IsA("TextLabel") or ancestor:IsA("TextButton") then
+            contextText = contextText .. " " .. lowerText(safeText(ancestor))
+        end
+        ancestor = ancestor.Parent
+        depth = depth + 1
+    end
+
+    local isRewardContext = containsAny(contextText, REWARD_WORDS)
+    return isRewardContext, actionText, contextText
+end
+
+local function rewardButtonVisible(buttonObject)
+    local current = buttonObject
+    while current do
+        if current:IsA("GuiObject") and not current.Visible then
+            return false
+        end
+        if current:IsA("ScreenGui") and not current.Enabled then
+            return false
+        end
+        current = current.Parent
+    end
+
+    if buttonObject.AbsoluteSize.X <= 0 or buttonObject.AbsoluteSize.Y <= 0 then
+        return false
+    end
+
+    local ok, active = pcall(function()
+        return buttonObject.Active
+    end)
+    if ok and not active then return false end
+
+    local interactableOk, interactable = pcall(function()
+        return buttonObject.Interactable
+    end)
+    if interactableOk and not interactable then return false end
+
+    return true
+end
+
+local function rewardButtonReady(buttonObject, actionText)
+    if not rewardButtonVisible(buttonObject) then return false end
+    if containsAny(actionText, BLOCKED_WORDS) then return false end
+    return true
+end
+
+local function clickRewardButton(buttonObject)
+    -- Prefer firing the actual UI activation signal so the game's own
+    -- LocalScript performs its normal server request and validation.
+    if type(firesignal) == "function" then
+        local ok = pcall(function()
+            firesignal(buttonObject.Activated)
+        end)
+        if ok then return true end
+
+        ok = pcall(function()
+            firesignal(buttonObject.MouseButton1Click)
+        end)
+        if ok then return true end
+    end
+
+    -- Fallback to a real cursor click at the center of the visible button.
+    local center = buttonObject.AbsolutePosition + (buttonObject.AbsoluteSize / 2)
+    local x, y = center.X, center.Y
+
+    local inputOk, inputService = pcall(function()
+        return game:GetService("VirtualInputManager")
+    end)
+
+    if inputOk and inputService then
+        local sent = pcall(function()
+            inputService:SendMouseButtonEvent(x, y, 0, true, game, 0)
+            task.wait(0.08)
+            inputService:SendMouseButtonEvent(x, y, 0, false, game, 0)
+        end)
+        if sent then return true end
+    end
+
+    local userOk = pcall(function()
+        VirtualUser:CaptureController()
+        local camera = workspace.CurrentCamera
+        local cframe = camera and camera.CFrame or CFrame.new()
+        VirtualUser:Button1Down(Vector2.new(x, y), cframe)
+        task.wait(0.08)
+        VirtualUser:Button1Up(Vector2.new(x, y), cframe)
+    end)
+
+    return userOk
+end
+
+task.spawn(function()
+    while running() and gui.Parent do
+        if not Config.AutoRewards then
+            rewardStatus.Text = "Rewards: desligado"
+        else
+            local playerGui = Player:FindFirstChildOfClass("PlayerGui")
+            local scanned = 0
+            local ready = 0
+            local activated = 0
+
+            if playerGui then
+                for _, candidate in ipairs(playerGui:GetDescendants()) do
+                    if candidate:IsA("GuiButton") then
+                        local isReward, actionText = rewardButtonInfo(candidate)
+                        if isReward then
+                            scanned = scanned + 1
+                            local isReady = rewardButtonReady(candidate, actionText)
+                            local state = rewardButtonStates[candidate]
+
+                            if not state then
+                                state = { attempted = false, failures = 0, lastAttempt = 0 }
+                                rewardButtonStates[candidate] = state
+                            end
+
+                            if not isReady then
+                                -- A recompensa mudou para bloqueada/resgatada.
+                                -- Permite uma nova coleta quando voltar a ficar pronta.
+                                state.attempted = false
+                                state.failures = 0
+                                state.lastAttempt = 0
+                            else
+                                ready = ready + 1
+                                local elapsed = os.clock() - state.lastAttempt
+                                local mayRetry = not state.attempted
+                                    and state.failures < REWARD_MAX_FAILED_ATTEMPTS
+                                    and elapsed >= REWARD_RETRY_DELAY
+
+                                if mayRetry then
+                                    state.lastAttempt = os.clock()
+                                    local clicked = clickRewardButton(candidate)
+                                    if clicked then
+                                        state.attempted = true
+                                        activated = activated + 1
+                                    else
+                                        state.failures = state.failures + 1
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            if scanned == 0 then
+                rewardStatus.Text = "Rewards: abra o painel de recompensas"
+            elseif ready == 0 then
+                rewardStatus.Text = "Rewards: " .. scanned .. " encontradas • aguardando"
+            else
+                rewardStatus.Text = "Rewards: " .. ready .. " liberada(s) • " ..
+                    activated .. " acionada(s)"
+            end
+        end
+
+        task.wait(REWARD_SCAN_INTERVAL)
+    end
+end)
 
 task.spawn(function()
     while running() and gui.Parent do
