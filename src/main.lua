@@ -1301,7 +1301,7 @@ local KEYBIND_ACTION = "ZATH_HUB_LEFT_CTRL_TOGGLE"
 local closeButton = headerButton("×", -33, function()
     -- O X encerra o hub; nao existe botao extra no rodape.
     Session.stopped = true
-    UserInputService:UnbindAction(KEYBIND_ACTION)
+    ContextActionService:UnbindAction(KEYBIND_ACTION)
     if keybindConnection then
         keybindConnection:Disconnect()
         keybindConnection = nil
