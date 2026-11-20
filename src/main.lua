@@ -527,13 +527,6 @@ local function crateCycle()
     crateBusy = false
 end
 
-task.spawn(function()
-    while running() do
-        if Config.Crates and not crateBusy then crateCycle() end
-        task.wait(1)
-    end
-end)
-
 --========================================================
 -- VARIANTES: uma chamada por ocupacao/spawn
 --========================================================
