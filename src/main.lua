@@ -750,7 +750,7 @@ Player.Idled:Connect(function()
 end)
 
 --========================================================
--- INTERFACE
+-- INTERFACE | ACRYLIC COM JANELA E BOTAO FLUTUANTE
 --========================================================
 
 pcall(function()
@@ -766,21 +766,32 @@ end)
 local gui = Instance.new("ScreenGui")
 gui.Name = "ZATH_HUB_V4"
 gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parent
 
 local main = Instance.new("Frame")
+main.Name = "Main"
 main.Size = UDim2.fromOffset(360, 430)
 main.Position = UDim2.new(0.5, -180, 0.5, -215)
-main.BackgroundColor3 = Color3.fromRGB(17, 17, 24)
+main.BackgroundColor3 = Color3.fromRGB(18, 20, 30)
+main.BackgroundTransparency = 0.16
 main.BorderSizePixel = 0
 main.Active = true
 main.Draggable = true
 main.Parent = gui
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 13)
 
 local outline = Instance.new("UIStroke", main)
-outline.Color = Color3.fromRGB(145, 75, 210)
-outline.Thickness = 1.5
+outline.Color = Color3.fromRGB(65, 139, 245)
+outline.Transparency = 0.28
+outline.Thickness = 1.2
+
+local mainGradient = Instance.new("UIGradient", main)
+mainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(27, 30, 45)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(13, 15, 24))
+})
+mainGradient.Rotation = 90
 
 local function label(text, x, y, w, h, color, parentObject)
     local obj = Instance.new("TextLabel")
@@ -800,22 +811,57 @@ local function button(text, x, y, w, h, callback, parentObject)
     local obj = Instance.new("TextButton")
     obj.Position = UDim2.fromOffset(x, y)
     obj.Size = UDim2.fromOffset(w, h)
-    obj.BackgroundColor3 = Color3.fromRGB(43, 35, 58)
-    obj.TextColor3 = Color3.fromRGB(245, 240, 255)
+    obj.BackgroundColor3 = Color3.fromRGB(36, 48, 70)
+    obj.BackgroundTransparency = 0.12
+    obj.TextColor3 = Color3.fromRGB(235, 242, 255)
     obj.Font = Enum.Font.GothamBold
     obj.TextSize = 12
     obj.Text = text
+    obj.AutoButtonColor = true
     obj.Parent = parentObject or main
-    Instance.new("UICorner", obj).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", obj).CornerRadius = UDim.new(0, 7)
     obj.MouseButton1Click:Connect(callback)
     return obj
 end
 
-label("ZATH HUB  |  V4", 15, 10, 260, 28,
-    Color3.fromRGB(195, 140, 255)).TextSize = 18
-
 local minimized = false
+local maximized = false
+local normalSize = UDim2.fromOffset(360, 430)
+local maxSize = UDim2.fromOffset(440, 500)
+
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.BackgroundTransparency = 1
+header.Position = UDim2.fromOffset(0, 0)
+header.Size = UDim2.new(1, 0, 0, 62)
+header.Parent = main
+
+local title = label("ZATH HUB", 15, 9, 180, 25, Color3.fromRGB(224, 237, 255), header)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 19
+
+local subtitle = label("V4  •  AUTOMATION", 16, 33, 190, 16, Color3.fromRGB(126, 166, 220), header)
+subtitle.TextSize = 9
+subtitle.Font = Enum.Font.GothamMedium
+
+local function headerButton(text, x, callback)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.fromOffset(23, 23)
+    b.Position = UDim2.new(1, x, 0, 10)
+    b.BackgroundColor3 = Color3.fromRGB(48, 54, 72)
+    b.BackgroundTransparency = 0.12
+    b.Text = text
+    b.TextColor3 = Color3.fromRGB(235, 240, 250)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 14
+    b.Parent = header
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    b.MouseButton1Click:Connect(callback)
+    return b
+end
+
 local body = Instance.new("Frame")
+body.Name = "Content"
 body.Position = UDim2.fromOffset(10, 67)
 body.Size = UDim2.new(1, -20, 1, -78)
 body.BackgroundTransparency = 1
@@ -824,28 +870,78 @@ body.Parent = main
 local status = label(
     loadedFromFile and "Configuracoes carregadas do arquivo"
         or (filePersistence and "Configuracoes carregadas" or "Configuracoes padrao/cache"),
-    15, 40, 320, 20, Color3.fromRGB(160, 220, 170)
+    15, 40, 230, 18, Color3.fromRGB(155, 205, 175), header
 )
+status.TextSize = 9
 
 local function section(text, y)
-    label(text, 5, y, 320, 20, Color3.fromRGB(190, 130, 255), body)
+    local line = Instance.new("Frame")
+    line.Position = UDim2.fromOffset(5, y + 18)
+    line.Size = UDim2.new(1, -10, 0, 1)
+    line.BackgroundColor3 = Color3.fromRGB(76, 91, 119)
+    line.BackgroundTransparency = 0.55
+    line.BorderSizePixel = 0
+    line.Parent = body
+    local t = label(text, 5, y, 320, 18, Color3.fromRGB(125, 177, 245), body)
+    t.Font = Enum.Font.GothamBold
+    t.TextSize = 10
 end
 
 local function toggle(text, key, y, tableRef)
-    local b
-    b = button("", 5, y, 325, 29, function()
+    local row = Instance.new("Frame")
+    row.Position = UDim2.fromOffset(5, y)
+    row.Size = UDim2.new(1, -10, 0, 29)
+    row.BackgroundColor3 = Color3.fromRGB(38, 43, 58)
+    row.BackgroundTransparency = 0.42
+    row.BorderSizePixel = 0
+    row.Parent = body
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
+
+    local name = label(text, 9, 0, 255, 29, Color3.fromRGB(230, 234, 244), row)
+    name.Font = Enum.Font.GothamMedium
+    name.TextSize = 11
+
+    local track = Instance.new("Frame")
+    track.Name = "Switch"
+    track.Size = UDim2.fromOffset(42, 22)
+    track.Position = UDim2.new(1, -51, 0.5, -11)
+    track.BorderSizePixel = 0
+    track.Parent = row
+    Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame")
+    knob.Name = "Knob"
+    knob.Size = UDim2.fromOffset(16, 16)
+    knob.Position = UDim2.new(0, 3, 0.5, -8)
+    knob.BorderSizePixel = 0
+    knob.Parent = track
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local hitbox = Instance.new("TextButton")
+    hitbox.Size = UDim2.fromScale(1, 1)
+    hitbox.BackgroundTransparency = 1
+    hitbox.Text = ""
+    hitbox.Parent = row
+
+    local function refresh()
+        local on = tableRef[key] == true
+        track.BackgroundColor3 = on
+            and Color3.fromRGB(42, 133, 245)
+            or Color3.fromRGB(91, 96, 108)
+        knob.BackgroundColor3 = on
+            and Color3.fromRGB(17, 20, 29)
+            or Color3.fromRGB(164, 168, 177)
+        knob.Position = on
+            and UDim2.new(1, -19, 0.5, -8)
+            or UDim2.new(0, 3, 0.5, -8)
+    end
+
+    hitbox.MouseButton1Click:Connect(function()
         tableRef[key] = not tableRef[key]
         local on = tableRef[key]
         local saved, saveError = saveConfig()
-        if saved then
-            status.Text = "Configuracao salva automaticamente"
-        else
-            status.Text = "Aviso: configuracao nao persistida (" .. tostring(saveError) .. ")"
-        end
-        b.Text = text .. (on and "  [ON]" or "  [OFF]")
-        b.BackgroundColor3 = on
-            and Color3.fromRGB(75, 45, 115)
-            or Color3.fromRGB(43, 35, 58)
+        status.Text = saved and "Configuracao salva automaticamente"
+            or ("Nao foi possivel salvar: " .. tostring(saveError))
 
         if key == "Variant" and on then
             for _, part in ipairs(SpawnFolder:GetChildren()) do collectVariant(part) end
@@ -857,17 +953,8 @@ local function toggle(text, key, y, tableRef)
         elseif tableRef == Config.Potions and on then
             usePotion(key)
         end
-
-        status.Text = text .. (on and " ativado" or " desativado")
-    end, body)
-
-    local function refresh()
-        local on = tableRef[key]
-        b.Text = text .. (on and "  [ON]" or "  [OFF]")
-        b.BackgroundColor3 = on
-            and Color3.fromRGB(75, 45, 115)
-            or Color3.fromRGB(43, 35, 58)
-    end
+        refresh()
+    end)
     refresh()
 end
 
@@ -876,21 +963,21 @@ toggle("Coletar variantes automaticamente", "Variant", 23, Config)
 toggle("Coletar itens e Item Rain (sem dinheiro)", "Items", 57, Config)
 toggle("Anti-AFK do cliente", "AntiAFK", 91, Config)
 
-section("POCOES — CONTROLES INDIVIDUAIS", 165)
-toggle("Pocao Bluetooth", "BluetoothPotion", 154, Config.Potions)
-toggle("Pocao de Dinheiro (Cash)", "CashPotion", 188, Config.Potions)
-toggle("Pocao de Velocidade dos Giros", "GradeSpeedPotion", 222, Config.Potions)
-toggle("Pocao de Sorte", "LuckPotion", 256, Config.Potions)
+section("POCOES", 137)
+toggle("Pocao Bluetooth", "BluetoothPotion", 160, Config.Potions)
+toggle("Pocao de Dinheiro (Cash)", "CashPotion", 194, Config.Potions)
+toggle("Pocao de Velocidade dos Giros", "GradeSpeedPotion", 228, Config.Potions)
+toggle("Pocao de Sorte", "LuckPotion", 262, Config.Potions)
 
-button("SALVAR CONFIGURACOES", 5, 290, 325, 24, function()
+button("SALVAR CONFIGURACOES", 5, 296, 325, 25, function()
     local ok, err = saveConfig()
     status.Text = ok and "Configuracoes salvas no executor"
         or ("Falha ao salvar: " .. tostring(err))
 end, body)
 
-section("VARIANTES DESCOBERTAS", 319)
-local variantList = label("Aguardando variantes...", 8, 341, 320, 35,
-    Color3.fromRGB(220, 210, 240), body)
+section("VARIANTES DESCOBERTAS", 328)
+local variantList = label("Aguardando variantes...", 8, 350, 320, 35,
+    Color3.fromRGB(210, 220, 238), body)
 variantList.TextYAlignment = Enum.TextYAlignment.Top
 variantList.TextWrapped = true
 
@@ -910,15 +997,53 @@ task.spawn(function()
     end
 end)
 
-local minimize = button("—", 320, 9, 25, 25, function()
-    minimized = not minimized
-    body.Visible = not minimized
-    main.Size = minimized and UDim2.fromOffset(360, 48)
-        or UDim2.fromOffset(360, 430)
-    minimize.Text = minimized and "+" or "—"
+local floating = Instance.new("TextButton")
+floating.Name = "ZathFloatingButton"
+floating.Size = UDim2.fromOffset(48, 48)
+floating.Position = UDim2.new(0, 24, 0.5, -24)
+floating.BackgroundColor3 = Color3.fromRGB(35, 112, 220)
+floating.Text = "Z"
+floating.TextColor3 = Color3.fromRGB(8, 15, 27)
+floating.Font = Enum.Font.GothamBlack
+floating.TextSize = 22
+floating.Visible = false
+floating.Parent = gui
+Instance.new("UICorner", floating).CornerRadius = UDim.new(1, 0)
+local floatStroke = Instance.new("UIStroke", floating)
+floatStroke.Color = Color3.fromRGB(150, 205, 255)
+floatStroke.Thickness = 1.5
+
+local function setPanelVisible(visible)
+    main.Visible = visible
+    floating.Visible = not visible
+end
+
+local closeButton = headerButton("×", -33, function()
+    setPanelVisible(false)
 end)
 
-button("ENCERRAR HUB", 15, 395, 330, 25, function()
+local maximizeButton = headerButton("□", -61, function()
+    if minimized then
+        minimized = false
+        body.Visible = true
+    end
+    maximized = not maximized
+    main.Size = maximized and maxSize or normalSize
+    maximizeButton.Text = maximized and "▣" or "□"
+end)
+
+local minimizeButton = headerButton("−", -89, function()
+    minimized = not minimized
+    body.Visible = not minimized
+    main.Size = minimized and UDim2.fromOffset(maximized and 440 or 360, 62)
+        or (maximized and maxSize or normalSize)
+end)
+
+floating.MouseButton1Click:Connect(function()
+    setPanelVisible(true)
+end)
+
+button("ENCERRAR HUB", 5, 390, 325, 25, function()
     Session.stopped = true
     for key in pairs(Config) do
         if type(Config[key]) == "boolean" then Config[key] = false end
@@ -927,7 +1052,7 @@ button("ENCERRAR HUB", 15, 395, 330, 25, function()
     table.clear(rainDrops)
     table.clear(rainAttempted)
     gui:Destroy()
-end)
+end, body)
 
 print("[ZATH HUB V4] Inicializado.")
 print("[ZATH HUB V4] Limite de coleta por lote ativado.")
