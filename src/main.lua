@@ -11,6 +11,8 @@ local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
 local CoreGui = game:GetService("CoreGui")
+local GuiService = game:GetService("GuiService")
+local TeleportService = game:GetService("TeleportService")
 
 local Player = Players.LocalPlayer
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -53,6 +55,7 @@ local Config = {
     Variant = false,
     Items = false,
     AntiAFK = false,
+    AutoRejoin = false,
     AutoRewards = false,
     Potions = {
         BluetoothPotion = false,
@@ -77,6 +80,7 @@ local function configSnapshot()
         Variant = Config.Variant == true,
         Items = Config.Items == true,
         AntiAFK = Config.AntiAFK == true,
+        AutoRejoin = Config.AutoRejoin == true,
         AutoRewards = Config.AutoRewards == true,
         Potions = {
             BluetoothPotion = Config.Potions.BluetoothPotion == true,
@@ -90,7 +94,7 @@ end
 local function applyConfig(saved)
     if type(saved) ~= "table" then return end
 
-    for _, key in ipairs({ "Variant", "Items", "AntiAFK", "AutoRewards" }) do
+    for _, key in ipairs({ "Variant", "Items", "AntiAFK", "AutoRejoin", "AutoRewards" }) do
         if type(saved[key]) == "boolean" then
             Config[key] = saved[key]
         end
@@ -754,6 +758,63 @@ Player.Idled:Connect(function()
 end)
 
 --========================================================
+-- AUTO REJOIN | tenta voltar ao mesmo servidor apos desconexao
+--========================================================
+
+local reconnectDisabledList = {}
+for _, enumName in ipairs({
+    "DisconnectLuaKick",
+    "DisconnectSecurityKeyMismatch",
+    "DisconnectNewSecurityKeyMismatch",
+    "DisconnectDuplicateTicket",
+    "DisconnectWrongVersion",
+    "DisconnectProtocolMismatch",
+    "DisconnectBadhash",
+    "DisconnectIllegalTeleport",
+    "DisconnectDuplicatePlayer",
+    "DisconnectCloudEditKick",
+    "DisconnectOnRemoteSysStats",
+    "DisconnectRaknetErrors",
+    "PlacelaunchFlooded",
+    "PlacelaunchHashException",
+    "PlacelaunchHashExpired",
+    "PlacelaunchUnauthorized",
+    "PlacelaunchUserLeft",
+    "PlacelaunchRestricted"
+}) do
+    pcall(function()
+        reconnectDisabledList[Enum.ConnectionError[enumName]] = true
+    end)
+end
+
+local reconnecting = false
+GuiService.ErrorMessageChanged:Connect(function()
+    if not running() or not Config.AutoRejoin or reconnecting then return end
+
+    local ok, errorType, errorCode = pcall(function()
+        return GuiService:GetErrorType(), GuiService:GetErrorCode()
+    end)
+    if not ok or errorType ~= Enum.ConnectionError.DisconnectErrors then return end
+    if reconnectDisabledList[errorCode] then return end
+
+    reconnecting = true
+    warn("[ZATH HUB] Desconexao detectada; tentando voltar ao servidor...")
+    task.spawn(function()
+        while running() and Config.AutoRejoin do
+            local success, err = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Player)
+            end)
+            if success then
+                break
+            end
+            warn("[ZATH HUB] Falha ao reconectar: " .. tostring(err))
+            task.wait(5)
+        end
+        reconnecting = false
+    end)
+end)
+
+--========================================================
 -- INTERFACE | ACRYLIC COM JANELA E BOTAO FLUTUANTE
 --========================================================
 
@@ -987,7 +1048,8 @@ section("AUTOMACAO", 0)
 toggle("Coletar variantes automaticamente", "Variant", 23, Config)
 toggle("Coletar itens e Item Rain (sem dinheiro)", "Items", 57, Config)
 toggle("Anti-AFK do cliente", "AntiAFK", 91, Config)
-toggle("Auto Collect Rewards", "AutoRewards", 125, Config)
+toggle("Auto Rejoin", "AutoRejoin", 125, Config)
+toggle("Auto Collect Rewards", "AutoRewards", 159, Config)
 
 section("POCOES", 171)
 toggle("Pocao Bluetooth", "BluetoothPotion", 194, Config.Potions)
